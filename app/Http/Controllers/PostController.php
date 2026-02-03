@@ -6,65 +6,135 @@ use App\Models\Post;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 
 class PostController extends Controller
 {
-    public function showCreateForm() {
+    /**
+     * Rate limit - Allow 30 searches per minute
+     */
+    private function checkSearchRateLimit(): ?array
+    {
+        $limit = RateLimiter::attempt(
+            'search:' . Auth::id(),
+            $perMinute = 30,
+            fn() => null
+        );
+
+        if (!$limit) {
+            return [
+                'error' => 'Too many search requests. Please try again later.',
+                'retry_after' => RateLimiter::availableIn('search:' . Auth::id())
+            ];
+        }
+
+        return null;
+    }
+    /**
+     * Show create post form
+     */
+    public function showCreateForm()
+    {
         return view('create-post');
     }
-    public function showSinglePost(Post $post) {
-        $post->body = strip_tags(Str::markdown($post->body), '<p><a><strong><em><ul><ol><li><br>');
+
+    /**
+     * Display single post with formatted content
+     */
+    public function showSinglePost(Post $post)
+    {
+        $post->load('user');
+        $post->body = strip_tags(
+            Str::markdown($post->body),
+            '<p><a><strong><em><ul><ol><li><br>'
+        );
         return view('single-post', ['post' => $post]);
     }
-    public function storeNewPost(Request $request) {
-        $incomingFields = $request->validate([
-            'title' => 'required|min:3|max:100',
-            'body' => 'required|min:10|max:1000',
+
+    /**
+     * Store new post in database
+     */
+    public function storeNewPost(Request $request)
+    {
+        $validated = $request->validate([
+            'title' => 'required|string|min:3|max:100',
+            'body' => 'required|string|min:10|max:1000',
         ]);
-        $incomingFields['title'] = strip_tags($incomingFields['title']);
-        $incomingFields['body'] = strip_tags($incomingFields['body']);
-        $incomingFields['user_id'] = Auth::id();
-        $newPost = Post::create($incomingFields);
-        
-        return redirect("/post/{$newPost->id}")->with('success', 'Your post has been created.');
+
+        $post = Post::create([
+            'user_id' => Auth::id(),
+            'title' => trim(strip_tags($validated['title'])),
+            'body' => trim(strip_tags($validated['body'])),
+        ]);
+
+        return redirect("/post/{$post->id}")->with('success', 'Your post has been created.');
     }
-    public function delete(Post $post) {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-        if (!$user) {
-            return redirect('/')->with('failure', 'User not authenticated.');
-        }
-        if ($user->cannot('delete', $post)) {
-            return redirect("/post/{$post->id}")->with('failure', 'You do not have permission to delete this post.');
-        }
-        $post->delete();
-        return redirect("/profile/" . $user->username)->with('success', 'Post successfully deleted.');
-    }
-    public function showEditForm(Post $post) {
+
+    /**
+     * Show edit form for post
+     */
+    public function showEditForm(Post $post)
+    {
         return view('edit-post', ['post' => $post]);
     }
-    public function update(Post $post, Request $request) {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-        if (!$user) {
-            return redirect('/')->with('failure', 'User not authenticated.');
-        }
-        if ($user->cannot('update', $post)) {
-            return redirect("/post/{$post->id}")->with('failure', 'You do not have permission to edit this post.');
-        }
-        $incomingFields = $request->validate([
-            'title' => 'required|min:3|max:100',
-            'body' => 'required|min:10|max:1000',
+
+    /**
+     * Update post in database
+     */
+    public function update(Post $post, Request $request)
+    {
+        $validated = $request->validate([
+            'title' => 'required|string|min:3|max:100',
+            'body' => 'required|string|min:10|max:1000',
         ]);
-        $incomingFields['title'] = strip_tags($incomingFields['title']);
-        $incomingFields['body'] = strip_tags($incomingFields['body']);
-        $post->update($incomingFields);
+
+        $post->update([
+            'title' => trim(strip_tags($validated['title'])),
+            'body' => trim(strip_tags($validated['body'])),
+        ]);
+
         return back()->with('success', 'Post successfully updated.');
     }
-    public function search(Request $request) {
-        $posts = Post::search($request->input('query'))->with('user')->paginate(10)->withQueryString();
-        $posts->load('user');
-        return view('search-results', ['posts' => $posts, 'query' => $request->input('query')]);
+
+    /**
+     * Delete post from database
+     */
+    public function delete(Post $post)
+    {
+        $username = Auth::user()->username;
+        $post->delete();
+
+        return redirect("/profile/{$username}")->with('success', 'Post successfully deleted.');
+    }
+
+    /**
+     * Search posts by title and body with rate limiting
+     */
+    public function search(string $query)
+    {
+        // Check rate limit for authenticated users
+        if (Auth::check()) {
+            $rateLimitError = $this->checkSearchRateLimit();
+            if ($rateLimitError) {
+                return response()->json($rateLimitError, 429);
+            }
+        }
+
+        $query = trim(urldecode($query));
+
+        if (strlen($query) < 2) {
+            return response()->json([]);
+        }
+
+        $posts = Post::select('id', 'title', 'body', 'user_id', 'created_at')
+            ->with('user:id,username,avatar')
+            ->where('title', 'LIKE', "%{$query}%")
+            ->orWhere('body', 'LIKE', "%{$query}%")
+            ->latest()
+            ->limit(10)
+            ->get();
+
+        return response()->json($posts);
     }
 
 }

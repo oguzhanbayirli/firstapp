@@ -1,4 +1,4 @@
-<x-profile :sharedData="$sharedData" :doctitle="$sharedData['username'] . ' - Posts'">
+<x-profile :avatar="$avatar" :username="$username" :postCount="$postCount" :currentlyFollowing="$currentlyFollowing" :followerCount="$followerCount" :followingCount="$followingCount" :doctitle="$username . ' - Posts'">
     @if($posts->count())
         <div class="list-group">
             @foreach($posts as $post)
@@ -6,6 +6,12 @@
             @endforeach
         </div>
     @else
-        <p class="text-center text-muted">Bu kullanıcının henüz gönderi yok.</p>
+        <div class="empty-state-container">
+            <div class="empty-state-icon">
+                <i class="fas fa-pencil-alt"></i>
+            </div>
+            <h3 class="empty-state-title">No Posts Yet</h3>
+            <p class="empty-state-text">{{ $username }} hasn't shared any posts yet.</p>
+        </div>
     @endif
 </x-profile>

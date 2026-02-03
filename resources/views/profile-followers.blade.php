@@ -1,12 +1,20 @@
-<x-profile :sharedData="$sharedData" :doctitle="$sharedData['username'] . ' - Followers'">
+<x-profile :avatar="$avatar" :username="$username" :postCount="$postCount" :currentlyFollowing="$currentlyFollowing" :followerCount="$followerCount" :followingCount="$followingCount" :doctitle="$username . ' - Followers'">
     <div class="list-group">
         @forelse ($followers as $follower)
-            <a href="/profile/{{ $follower->username }}" class="list-group-item list-group-item-action">
+            <a href="/profile/{{ $follower->username }}" class="list-group-item list-group-item-action d-flex align-items-center">
                 <img class="avatar-tiny" src="{{ $follower->avatar }}" />
-                <strong>{{ $follower->username }}</strong>
+                <div class="ml-2">
+                    <strong>{{ $follower->username }}</strong>
+                </div>
             </a>
         @empty
-            <p class="text-muted m-0">No followers yet.</p>
+            <div class="empty-state-container">
+                <div class="empty-state-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <h3 class="empty-state-title">No Followers</h3>
+                <p class="empty-state-text">{{ $username }} doesn't have any followers yet.</p>
+            </div>
         @endforelse
     </div>
 </x-profile>

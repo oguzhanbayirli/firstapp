@@ -14,7 +14,7 @@
             type="text" 
             placeholder="Enter title..." 
             autocomplete="off" 
-            style="padding: 8px 12px; background-color: #f8f9fa; font-size: 1.1rem;"
+            style="padding: 8px 12px; background-color: #f8f9fa;"
           />
           @error('title')
             <p class="alert alert-danger small mt-2 mb-0">{{ $message }}</p>
@@ -37,10 +37,10 @@
         </div>
 
         <div class="mt-3 d-flex gap-2">
-          <button class="btn btn-sm px-3" style="background-color: #f9322c; border-color: #f9322c; color: #fff;">
+          <button class="btn btn-primary px-3" style="font-weight: 600;">
             <i class="fas fa-save mr-1"></i> Save
           </button>
-          <a href="/" class="btn btn-sm btn-outline-secondary px-3">
+          <a href="/" class="btn btn-outline-secondary px-3" style="font-weight: 600;">
             <i class="fas fa-times mr-1"></i> Cancel
           </a>
         </div>

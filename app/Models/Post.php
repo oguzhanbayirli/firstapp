@@ -9,7 +9,6 @@ use Laravel\Scout\Searchable;
 
 class Post extends Model
 {
-    use Searchable;
     use HasFactory;
 
     protected $fillable = [
@@ -17,16 +16,29 @@ class Post extends Model
         'body',
         'user_id',
     ];
-    public function toSearchableArray(): array
-    {
-        return [
-            'title' => $this->title,
-            'body' => $this->body,
-        ];
-    }
 
+    /**
+     * Get post's author
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Scope to search posts
+     */
+    public function scopeSearch($query, $searchTerm)
+    {
+        return $query->where('title', 'LIKE', "%{$searchTerm}%")
+            ->orWhere('body', 'LIKE', "%{$searchTerm}%");
+    }
+
+    /**
+     * Scope to get recent posts
+     */
+    public function scopeRecent($query)
+    {
+        return $query->orderBy('created_at', 'desc');
     }
 }

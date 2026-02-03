@@ -11,128 +11,199 @@ use Illuminate\Support\Facades\Storage;
 
 class UserController extends Controller
 {
+    /**
+     * Handle user registration
+     */
     public function register(Request $request)
     {
-        $incomingFields = $request->validate([
-            'username' => 'required|unique:users,username|min:3|max:20',
+        $validated = $request->validate([
+            'username' => 'required|unique:users,username|min:3|max:20|alpha_dash',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|min:8|max:50|confirmed',
         ]);
-        $incomingFields['password'] = bcrypt($incomingFields['password']);
-        $incomingFields['avatar'] = 'default-avatar.svg';
-        $user = User::create($incomingFields);
+
+        $user = User::create([
+            'username' => $validated['username'],
+            'email' => $validated['email'],
+            'password' => $validated['password'],
+            'avatar' => 'default-avatar.svg',
+        ]);
+
         Auth::login($user);
+
         return redirect('/')->with('success', 'Welcome to FirstApp! You have successfully registered.');
     }
+
+    /**
+     * Handle user login
+     */
     public function login(Request $request)
     {
-        $incomingFields = $request->validate([
+        $credentials = $request->validate([
             'loginusername' => 'required',
             'loginpassword' => 'required',
         ]);
-        if (Auth::attempt(['username' => $incomingFields['loginusername'], 'password' => $incomingFields['loginpassword']])) {
+
+        if (Auth::attempt(
+            ['username' => $credentials['loginusername'], 'password' => $credentials['loginpassword']],
+            false
+        )) {
             $request->session()->regenerate();
             return redirect('/')->with('success', 'You have successfully logged in.');
-        } else {
-            return redirect('/')->with('failure', 'Incorrect login information.');
         }
+
+        return redirect('/')->with('failure', 'Incorrect login information.');
     }
+
+    /**
+     * Handle user logout
+     */
     public function logout(Request $request)
     {
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
         return redirect('/')->with('success', 'You have successfully logged out.');
     }
+    /**
+     * Show home page based on auth status
+     */
     public function showCorrectHomePage(Request $request)
     {
-        if (Auth::check()) {
-            /** @var User $user */
-            $user = Auth::user();
-            $filter = $request->get('feed', 'all');
-            
-            if ($filter === 'following') {
-                $posts = $user->feedPosts()->latest()->paginate(10)->withQueryString();
-            } else {
-                $posts = Post::latest()->paginate(10)->withQueryString();
-            }
-            
-            return view('home-feed', ['posts' => $posts, 'filter' => $filter]);
+        if (!Auth::check()) {
+            return view('home');
         }
-        return view('home');
+
+        /** @var User $user */
+        $user = Auth::user();
+        $filter = $request->get('feed', 'all');
+
+        $posts = $filter === 'following'
+            ? $user->feedPosts()
+                ->select('id', 'title', 'body', 'user_id', 'created_at')
+                ->with('user:id,username,avatar')
+                ->latest()
+                ->paginate(10)
+                ->withQueryString()
+            : Post::select('id', 'title', 'body', 'user_id', 'created_at')
+                ->with('user:id,username,avatar')
+                ->latest()
+                ->paginate(10)
+                ->withQueryString();
+
+        return view('home-feed', compact('posts', 'filter'));
     }
+
+    /**
+     * Display user profile with posts
+     */
     public function profile(User $profile)
     {
-        $this->getSharedData($profile);
-        return view('profile-posts', ['posts' => $profile->posts()->latest()->get()]);
+        $data = $this->getSharedData($profile);
+        $data['posts'] = $profile->posts()
+            ->select('id', 'title', 'body', 'user_id', 'created_at')
+            ->with('user:id,username,avatar')
+            ->latest()
+            ->get();
+
+        return view('profile-posts', $data);
     }
+
+    /**
+     * Show avatar management form
+     */
     public function showAvatarForm()
     {
         return view('manage-avatar');
     }
+
+    /**
+     * Store avatar file and update user
+     */
     public function storeAvatar(Request $request)
     {
         $request->validate([
-            'avatar' => 'required|image|max:5000',
+            'avatar' => 'required|image|mimes:jpeg,png,gif|max:5000',
         ]);
 
         /** @var User $user */
         $user = Auth::user();
+
         if (!$user) {
             return redirect('/')->with('failure', 'User not authenticated.');
         }
 
-        // Get uploaded file
         $file = $request->file('avatar');
         $filename = Auth::id() . '.jpg';
-        $path = storage_path('app/public/avatars/' . $filename);
+        $directory = storage_path('app/public/avatars');
 
         // Ensure directory exists
-        if (!file_exists(storage_path('app/public/avatars'))) {
-            mkdir(storage_path('app/public/avatars'), 0755, true);
+        if (!is_dir($directory)) {
+            mkdir($directory, 0755, true);
         }
 
-        // Move uploaded file
-        $file->move(storage_path('app/public/avatars'), $filename);
+        // Store the file
+        $file->move($directory, $filename);
 
-        // Delete old avatar if exists
+        // Delete old avatar if different
         $oldAvatar = $user->getRawOriginal('avatar');
-        if ($oldAvatar && $oldAvatar !== $filename) {
-            $oldPath = storage_path('app/public/avatars/' . $oldAvatar);
+        if ($oldAvatar && $oldAvatar !== 'default-avatar.svg' && $oldAvatar !== $filename) {
+            $oldPath = $directory . '/' . $oldAvatar;
             if (file_exists($oldPath)) {
                 unlink($oldPath);
             }
         }
 
-        // Update user avatar
-        $user->avatar = $filename;
-        $user->save();
+        $user->update(['avatar' => $filename]);
 
         return back()->with('success', 'Avatar successfully updated.');
     }
-    private function getSharedData(User $profile)
+
+    private function getSharedData(User $profile): array
     {
         $currentlyFollowing = false;
         if (Auth::check()) {
-            $currentlyFollowing = Follow::where('user_id', Auth::id())->where('followed_user_id', $profile->id)->exists();
+            /** @var User $user */
+            $user = Auth::user();
+            $currentlyFollowing = $user->isFollowing($profile);
         }
-        view()->share('sharedData', [
+
+        return [
             'avatar' => $profile->avatar,
             'username' => $profile->username,
             'postCount' => $profile->posts()->count(),
             'currentlyFollowing' => $currentlyFollowing,
-            'followerCount' => $profile->followers()->count(),
-            'followingCount' => $profile->following()->count(),
-        ]);
+            'followerCount' => $profile->followerCount(),
+            'followingCount' => $profile->followingCount(),
+        ];
     }
+
+    /**
+     * Display user followers with pagination
+     */
     public function profileFollowers(User $profile)
     {
-        $this->getSharedData($profile);
-        return view('profile-followers', ['followers' => $profile->followers()->get()]);
+        $data = $this->getSharedData($profile);
+        $data['followers'] = $profile->followers()
+            ->select('users.id', 'users.username', 'users.avatar')
+            ->latest('follow.created_at')
+            ->paginate(15);
+
+        return view('profile-followers', $data);
     }
+
+    /**
+     * Display users that user is following with pagination
+     */
     public function profileFollowing(User $profile)
     {
-        $this->getSharedData($profile);
-        return view('profile-following', ['following' => $profile->following()->get()]);
+        $data = $this->getSharedData($profile);
+        $data['following'] = $profile->following()
+            ->select('users.id', 'users.username', 'users.avatar')
+            ->latest('follow.created_at')
+            ->paginate(15);
+
+        return view('profile-following', $data);
     }
 }

@@ -3,45 +3,50 @@
 use App\Http\Controllers\FollowController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\UserController;
-use App\Models\Post;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
-Route::get('/', [UserController::class, 'showCorrectHomePage'])->name('login');
-Route::get('/post/{post}', [PostController::class, 'showSinglePost']);
+Route::get('/', [UserController::class, 'showCorrectHomePage'])->name('home');
+Route::get('/post/{post}', [PostController::class, 'showSinglePost'])->name('post.show');
 
-// Guest only routes
+// Authentication routes
 Route::middleware('guest')->group(function () {
-    Route::post('/register', [UserController::class, 'register']);
-    Route::post('/login', [UserController::class, 'login']);
+    Route::post('/register', [UserController::class, 'register'])->name('register');
+    Route::post('/login', [UserController::class, 'login'])->name('login');
 });
 
-// Authenticated routes
+// Authenticated user routes
 Route::middleware('mustBeLoggedIn')->group(function () {
-    Route::get('/create-post', [PostController::class, 'showCreateForm']);
-    Route::post('/create-post', [PostController::class, 'storeNewPost']);
-    Route::post('/logout', [UserController::class, 'logout']);
+    // Post routes - keep old URLs for compatibility
+    Route::get('/create-post', [PostController::class, 'showCreateForm'])->name('posts.create');
+    Route::post('/create-post', [PostController::class, 'storeNewPost'])->name('posts.store');
+    Route::get('/post/{post}/edit', [PostController::class, 'showEditForm'])->name('posts.edit');
+    Route::put('/post/{post}', [PostController::class, 'update'])->name('posts.update');
+    Route::delete('/post/{post}', [PostController::class, 'delete'])->name('posts.delete');
 
-    Route::get('/profile/{profile:username}', [UserController::class, 'profile']);
-    Route::get('/profile/{profile:username}/followers', [UserController::class, 'profileFollowers']);
-    Route::get('/profile/{profile:username}/following', [UserController::class, 'profileFollowing']);
+    // User routes
+    Route::prefix('profile')->as('profile.')->group(function () {
+        Route::get('/{profile:username}', [UserController::class, 'profile'])->name('show');
+        Route::get('/{profile:username}/followers', [UserController::class, 'profileFollowers'])->name('followers');
+        Route::get('/{profile:username}/following', [UserController::class, 'profileFollowing'])->name('following');
+    });
 
-    Route::get('/manage-avatar', [UserController::class, 'showAvatarForm']);
-    Route::post('/manage-avatar', [UserController::class, 'storeAvatar']);
+    Route::get('/manage-avatar', [UserController::class, 'showAvatarForm'])->name('avatar.edit');
+    Route::post('/manage-avatar', [UserController::class, 'storeAvatar'])->name('avatar.store');
 
-    Route::post('/create-follow/{user:username}', [FollowController::class, 'createFollow']);
-    Route::post('/remove-follow/{user:username}', [FollowController::class, 'removeFollow']);
+    // Follow routes
+    Route::post('/follow/{user:username}', [FollowController::class, 'createFollow'])->name('follow');
+    Route::post('/unfollow/{user:username}', [FollowController::class, 'removeFollow'])->name('unfollow');
 
-    Route::get('/search{query}', [PostController::class, 'search']);
+    // Search route
+    Route::get('/search/{query}', [PostController::class, 'search'])->name('search');
+
+    // Logout
+    Route::post('/logout', [UserController::class, 'logout'])->name('logout');
 });
-
-// Post authorization routes
-Route::get('/post/{post}/edit', [PostController::class, 'showEditForm'])->middleware('can:update,post');
-Route::put('/post/{post}', [PostController::class, 'update'])->middleware('can:update,post');
-Route::delete('/post/{post}', [PostController::class, 'delete'])->middleware('can:delete,post');
 
 // Admin routes
 Route::get('/admins-only', function () {
     return 'Only admins can see this page.';
-})->middleware('can:visitAdminPages');
+})->middleware('can:visitAdminPages')->name('admin');
 

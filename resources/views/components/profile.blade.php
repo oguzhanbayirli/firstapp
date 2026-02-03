@@ -1,20 +1,20 @@
-<x-layout :doctitle="$doctitle ?? $sharedData['username']">
+<x-layout :doctitle="$doctitle ?? $username">
     <div class="container py-md-5 container--narrow">
         <h2>
-            <img class="avatar-small" src="{{ $sharedData['avatar'] }}" /> {{ $sharedData['username'] }}
+            <img class="avatar-small" src="{{ $avatar }}" /> {{ $username }}
             @auth
-                @if (auth()->user()->username !== $sharedData['username'])
-                    @if ($sharedData['currentlyFollowing'])
-                        <form class="ml-2 d-inline" action="/remove-follow/{{ $sharedData['username'] }}" method="POST">
+                @if (auth()->user()->username !== $username)
+                    @if ($currentlyFollowing)
+                        <form class="ml-2 d-inline" action="/unfollow/{{ $username }}" method="POST">
                             @csrf
                             <button class="btn btn-outline-secondary btn-sm" style="border-color: #6c757d;">
                                 <i class="fas fa-user-times"></i> Unfollow
                             </button>
                         </form>
                     @else
-                        <form class="ml-2 d-inline" action="/create-follow/{{ $sharedData['username'] }}" method="POST">
+                        <form class="ml-2 d-inline" action="/follow/{{ $username }}" method="POST">
                             @csrf
-                            <button class="btn btn-sm" style="background-color: #f9322c; border-color: #f9322c; color: #fff;">
+                            <button class="btn btn-primary btn-sm">
                                 <i class="fas fa-user-plus"></i> Follow
                             </button>
                         </form>
@@ -28,9 +28,9 @@
         </h2>
 
         <div class="profile-nav nav nav-tabs pt-2 mb-4">
-            <a href="/profile/{{ $sharedData['username'] }}" class="profile-nav-link nav-item nav-link {{ request()->is('profile/' . $sharedData['username']) ? 'active' : '' }}">Posts: {{ $sharedData['postCount'] }}</a>
-            <a href="/profile/{{ $sharedData['username'] }}/followers" class="profile-nav-link nav-item nav-link {{ request()->is('profile/' . $sharedData['username'] . '/followers') ? 'active' : '' }}">Followers: {{ $sharedData['followerCount'] }}</a>
-            <a href="/profile/{{ $sharedData['username'] }}/following" class="profile-nav-link nav-item nav-link {{ request()->is('profile/' . $sharedData['username'] . '/following') ? 'active' : '' }}">Following: {{ $sharedData['followingCount'] }}</a>
+            <a href="/profile/{{ $username }}" class="profile-nav-link nav-item nav-link {{ request()->is('profile/' . $username) ? 'active' : '' }}">Posts: {{ $postCount }}</a>
+            <a href="/profile/{{ $username }}/followers" class="profile-nav-link nav-item nav-link {{ request()->is('profile/' . $username . '/followers') ? 'active' : '' }}">Followers: {{ $followerCount }}</a>
+            <a href="/profile/{{ $username }}/following" class="profile-nav-link nav-item nav-link {{ request()->is('profile/' . $username . '/following') ? 'active' : '' }}">Following: {{ $followingCount }}</a>
         </div>
         <div class="profile-slot-content">
             {{ $slot }}

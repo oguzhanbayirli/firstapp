@@ -39,10 +39,10 @@
         </div>
 
         <div class="mt-3 d-flex gap-2">
-          <button class="btn btn-sm px-3" style="background-color: #f9322c; border-color: #f9322c; color: #fff;">
+          <button class="btn btn-primary px-3" style="font-weight: 600;">
             <i class="fas fa-save mr-1"></i> Save
           </button>
-          <a href="/post/{{ $post->id }}" class="btn btn-sm btn-outline-secondary px-3">
+          <a href="/post/{{ $post->id }}" class="btn btn-outline-secondary px-3" style="font-weight: 600;">
             <i class="fas fa-times mr-1"></i> Cancel
           </a>
         </div>

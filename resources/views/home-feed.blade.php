@@ -1,15 +1,15 @@
 <x-layout doctitle="Feed">
-    <div class="container py-md-5 container--narrow">
-      <div class="mb-4">
+    <div class="container py-md-4 container--narrow">
+      <div class="mb-4 pb-3 border-bottom">
         <ul class="nav nav-tabs" role="tablist">
           <li class="nav-item">
             <a class="nav-link {{ $filter === 'all' ? 'active' : '' }}" href="/?feed=all">
-              <i class="fas fa-globe mr-1"></i> All Posts
+              <i class="fas fa-globe mr-2"></i> All Posts
             </a>
           </li>
           <li class="nav-item">
             <a class="nav-link {{ $filter === 'following' ? 'active' : '' }}" href="/?feed=following">
-              <i class="fas fa-users mr-1"></i> Following
+              <i class="fas fa-heart mr-2"></i> Following
             </a>
           </li>
         </ul>
@@ -21,27 +21,32 @@
               <x-post :post="$post" />
               @endforeach
           </div>
-          <div class="mt-3">
+          <div class="mt-4">
             {{ $posts->links() }}
           </div>
         @else
-          <div class="empty-state">
+          <div class="empty-state-container py-5">
+            <div class="empty-state-icon">
+              @if ($filter === 'following')
+                <i class="fas fa-heart-broken"></i>
+              @else
+                <i class="fas fa-inbox"></i>
+              @endif
+            </div>
             @if ($filter === 'following')
-              <i class="fas fa-user-friends"></i>
-              <h4>Your feed is empty</h4>
-              <p class="text-muted">Hello <strong>{{ auth()->user()->username }}</strong>! Follow some users to see their posts here.</p>
-              <a href="/?feed=all" class="btn btn-sm" style="background-color: #f9322c; color: #fff;">
-                <i class="fas fa-search mr-1"></i> Discover Users
+              <h2 class="empty-state-title">Your Feed Is Empty</h2>
+              <p class="empty-state-text">Start following users to see their posts here!</p>
+              <a href="/?feed=all" class="btn btn-primary">
+                <i class="fas fa-globe mr-2"></i> Discover Posts
               </a>
             @else
-              <i class="fas fa-pen-fancy"></i>
-              <h4>No posts yet</h4>
-              <p class="text-muted">Hello <strong>{{ auth()->user()->username }}</strong>! Be the first to share your thoughts.</p>
-              <a href="/create-post" class="btn btn-sm" style="background-color: #f9322c; color: #fff;">
-                <i class="fas fa-plus mr-1"></i> Create Your First Post
+              <h2 class="empty-state-title">No Posts Yet</h2>
+              <p class="empty-state-text">Be the first to share your thoughts with the community!</p>
+              <a href="/create-post" class="btn btn-primary">
+                <i class="fas fa-pencil-alt mr-2"></i> Create Post
               </a>
             @endif
-          </div>
+        </div>
       @endunless
     </div>
 </x-layout>

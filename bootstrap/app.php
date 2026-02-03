@@ -14,6 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'mustBeLoggedIn' => \App\Http\Middleware\MustBeLoggedIn::class,
         ]);
+        
+        // Add cache headers middleware
+        $middleware->append(\App\Http\Middleware\SetCacheHeaders::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
