@@ -499,7 +499,7 @@ header .flex-row > div > div {
 
 .form-control-title {
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 400;
   color: var(--text-dark);
 }
 
