@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\FirstExampleEvent;
 use App\Models\User;
 use App\Models\Post;
 use App\Models\Follow;
@@ -48,6 +49,7 @@ class UserController extends Controller
             ['username' => $credentials['loginusername'], 'password' => $credentials['loginpassword']],
             false
         )) {
+            event(new FirstExampleEvent($credentials['loginusername'], 'logged in'));
             $request->session()->regenerate();
             return redirect('/')->with('success', 'You have successfully logged in.');
         }

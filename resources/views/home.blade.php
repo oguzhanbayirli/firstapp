@@ -54,7 +54,7 @@
                   @enderror
                 </div>
 
-                <button type="submit" class="btn btn-lg btn-block mt-4" style="background-color: #f9322c; border-color: #f9322c; color: #fff; font-weight: 600;">
+                <button type="submit" class="btn btn-primary btn-lg btn-block mt-4 btn-strong">
                   <i class="fas fa-user-plus mr-2"></i> Create Account
                 </button>
               </form>

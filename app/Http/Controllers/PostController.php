@@ -12,11 +12,15 @@ class PostController extends Controller
 {
     /**
      * Rate limit - Allow 30 searches per minute
+     *
+     * @return array|null Error array if limit exceeded, null otherwise
      */
     private function checkSearchRateLimit(): ?array
     {
+        $key = 'search:' . Auth::id();
+        
         $limit = RateLimiter::attempt(
-            'search:' . Auth::id(),
+            $key,
             $perMinute = 30,
             fn() => null
         );
@@ -24,7 +28,7 @@ class PostController extends Controller
         if (!$limit) {
             return [
                 'error' => 'Too many search requests. Please try again later.',
-                'retry_after' => RateLimiter::availableIn('search:' . Auth::id())
+                'retry_after' => RateLimiter::availableIn($key)
             ];
         }
 
@@ -32,6 +36,8 @@ class PostController extends Controller
     }
     /**
      * Show create post form
+     *
+     * @return \Illuminate\View\View
      */
     public function showCreateForm()
     {
@@ -40,6 +46,9 @@ class PostController extends Controller
 
     /**
      * Display single post with formatted content
+     *
+     * @param Post $post
+     * @return \Illuminate\View\View
      */
     public function showSinglePost(Post $post)
     {
@@ -53,6 +62,9 @@ class PostController extends Controller
 
     /**
      * Store new post in database
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function storeNewPost(Request $request)
     {
@@ -67,11 +79,15 @@ class PostController extends Controller
             'body' => trim(strip_tags($validated['body'])),
         ]);
 
-        return redirect("/post/{$post->id}")->with('success', 'Your post has been created.');
+        return redirect("/post/{$post->id}")
+            ->with('success', 'Your post has been created.');
     }
 
     /**
      * Show edit form for post
+     *
+     * @param Post $post
+     * @return \Illuminate\View\View
      */
     public function showEditForm(Post $post)
     {
@@ -80,6 +96,10 @@ class PostController extends Controller
 
     /**
      * Update post in database
+     *
+     * @param Post $post
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function update(Post $post, Request $request)
     {
@@ -98,17 +118,27 @@ class PostController extends Controller
 
     /**
      * Delete post from database
+     *
+     * @param Post $post
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function delete(Post $post)
     {
-        $username = Auth::user()->username;
+        /** @var User $user */
+        $user = Auth::user();
+        $username = $user->username;
+        
         $post->delete();
 
-        return redirect("/profile/{$username}")->with('success', 'Post successfully deleted.');
+        return redirect("/profile/{$username}")
+            ->with('success', 'Post successfully deleted.');
     }
 
     /**
      * Search posts by title and body with rate limiting
+     *
+     * @param string $query
+     * @return \Illuminate\Http\JsonResponse
      */
     public function search(string $query)
     {
@@ -126,15 +156,17 @@ class PostController extends Controller
             return response()->json([]);
         }
 
+        // Sanitize query to prevent SQL injection
+        $sanitizedQuery = strip_tags($query);
+
         $posts = Post::select('id', 'title', 'body', 'user_id', 'created_at')
             ->with('user:id,username,avatar')
-            ->where('title', 'LIKE', "%{$query}%")
-            ->orWhere('body', 'LIKE', "%{$query}%")
+            ->where('title', 'LIKE', "%{$sanitizedQuery}%")
+            ->orWhere('body', 'LIKE', "%{$sanitizedQuery}%")
             ->latest()
             ->limit(10)
             ->get();
 
         return response()->json($posts);
     }
-
 }

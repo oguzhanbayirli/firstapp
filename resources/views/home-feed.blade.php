@@ -15,16 +15,11 @@
         </ul>
       </div>
 
-      @unless ($posts->isEmpty())
+      @forelse ($posts as $post)
           <div class="list-group">
-              @foreach ($posts as $post)
               <x-post :post="$post" />
-              @endforeach
           </div>
-          <div class="mt-4">
-            {{ $posts->links() }}
-          </div>
-        @else
+      @empty
           <div class="empty-state-container py-5">
             <div class="empty-state-icon">
               @if ($filter === 'following')
@@ -47,6 +42,12 @@
               </a>
             @endif
         </div>
-      @endunless
+      @endforelse
+
+      @if ($posts->isNotEmpty())
+          <div class="mt-4">
+            {{ $posts->links() }}
+          </div>
+      @endif
     </div>
 </x-layout>

@@ -1,0 +1,114 @@
+/* CSS Variables for Theme Colors */
+:root {
+  --primary-color: #f9322c;
+  --primary-hover: #e02a25;
+  --primary-600: #e02a25;
+  --primary-500: #f9322c;
+  --primary-100: #ffe9e8;
+  --surface: #ffffff;
+  --surface-muted: #f8f9fa;
+  --surface-border: #e9ecef;
+  --secondary-color: #6c757d;
+  --success-color: #28a745;
+  --danger-color: #dc3545;
+  --text-dark: #292929;
+  --text-muted: #6c757d;
+  --border-radius: 4px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.1);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+  --transition: all 0.2s ease-in-out;
+}
+
+/* Base Styles */
+body,
+.tooltip {
+  font-family: "Source Sans Pro", sans-serif;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+  background-color: var(--surface-muted);
+  color: var(--text-dark);
+}
+
+a {
+  color: var(--primary-color);
+  transition: var(--transition);
+}
+
+a:hover {
+  color: var(--primary-hover);
+  text-decoration: none;
+}
+
+/* Typography */
+.display-3 {
+  font-size: 4.35rem;
+}
+
+@media (max-width: 768px) {
+  .display-3 {
+    font-size: 2.5rem;
+  }
+}
+
+/* Ensure images are responsive */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Ensure tables are responsive */
+.table-responsive {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Flexible embedding for iframes and videos */
+.embed-responsive {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+}
+
+.embed-responsive::before {
+  content: '';
+  display: block;
+  padding-bottom: 56.25%;
+}
+
+.embed-responsive iframe,
+.embed-responsive object,
+.embed-responsive embed {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* Responsive text alignment */
+@media (max-width: 767.98px) {
+  .text-md-left { text-align: left; }
+  .text-md-center { text-align: center; }
+  .text-md-right { text-align: right; }
+}
+
+@media (min-width: 768px) {
+  .text-lg-left { text-align: left; }
+  .text-lg-center { text-align: center; }
+  .text-lg-right { text-align: right; }
+}
+
+/* Flexible spacing utilities */
+@media (max-width: 575.98px) {
+  .mx-sm-auto { margin-left: auto; margin-right: auto; }
+  .p-sm-2 { padding: 0.5rem; }
+  .p-sm-3 { padding: 1rem; }
+  .my-sm-2 { margin-top: 0.5rem; margin-bottom: 0.5rem; }
+  .my-sm-3 { margin-top: 1rem; margin-bottom: 1rem; }
+}

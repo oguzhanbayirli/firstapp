@@ -12,11 +12,10 @@
             value="{{ old('title', $post->title) }}" 
             name="title" 
             id="post-title" 
-            class="form-control form-control-title border-0 shadow-sm" 
+            class="form-control form-control-title border-0 shadow-sm input-soft input-soft-lg" 
             type="text" 
             placeholder="Enter title..." 
             autocomplete="off" 
-            style="padding: 8px 12px; background-color: #f8f9fa; font-size: 1.1rem;"
           />
           @error('title')
             <p class="alert alert-danger small mt-2 mb-0">{{ $message }}</p>
@@ -29,9 +28,8 @@
             required 
             name="body" 
             id="post-body" 
-            class="body-content tall-textarea form-control border-0 shadow-sm" 
+            class="body-content tall-textarea form-control border-0 shadow-sm textarea-soft" 
             placeholder="Write your thoughts here..."
-            style="padding: 8px 12px; background-color: #f8f9fa; resize: vertical; min-height: 200px;"
           >{{ old('body', $post->body) }}</textarea>
           @error('body')
             <p class="alert alert-danger small mt-2 mb-0">{{ $message }}</p>
@@ -39,10 +37,10 @@
         </div>
 
         <div class="mt-3 d-flex gap-2">
-          <button class="btn btn-primary px-3" style="font-weight: 600;">
+          <button class="btn btn-primary px-3 btn-strong">
             <i class="fas fa-save mr-1"></i> Save
           </button>
-          <a href="/post/{{ $post->id }}" class="btn btn-outline-secondary px-3" style="font-weight: 600;">
+          <a href="/post/{{ $post->id }}" class="btn btn-outline-secondary px-3 btn-strong">
             <i class="fas fa-times mr-1"></i> Cancel
           </a>
         </div>
