@@ -106,11 +106,11 @@
   }
 
   .close-live-search {
-    font-size: 1.2rem;
+    font-size: 1.05rem;
   }
 
   .search-overlay-icon {
-    font-size: 1rem;
+    font-size: 0.9rem;
   }
 
   .chat-wrapper {
@@ -225,7 +225,7 @@
   }
 
   .search-overlay-icon {
-    font-size: 2rem;
+    font-size: 1.8rem;
   }
 
   .live-search-field {
@@ -233,7 +233,7 @@
   }
 
   .close-live-search {
-    font-size: 2rem;
+    font-size: 1.8rem;
   }
 
   .chat-wrapper {
