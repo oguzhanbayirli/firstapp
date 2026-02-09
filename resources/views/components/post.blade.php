@@ -1,5 +1,5 @@
 <a href="/post/{{ $post->id }}" class="list-group-item list-group-item-action d-flex align-items-center py-3">
-    <img class="avatar-tiny" src="{{ $post->user->avatar }}" />
+    <img class="avatar-tiny" src="{{ $post->user->avatar }}" alt="{{ $post->user->username }}" loading="lazy" />
     <div class="ml-2">
         <strong>{{ $post->title }}</strong>
         <div class="text-muted small">

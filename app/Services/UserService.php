@@ -2,70 +2,47 @@
 
 namespace App\Services;
 
+use App\Mail\WelcomeEmail;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
 
 class UserService
 {
-    /**
-     * Register a new user
-     *
-     * @param array $data Array containing username, email, and password
-     * @return User
-     */
     public function register(array $data): User
     {
-        $data['username'] = strip_tags(trim($data['username']));
-        $data['email'] = strip_tags(trim($data['email']));
-        $data['password'] = Hash::make($data['password']);
-
-        return User::create($data);
+        $data = $this->sanitizeCredentials($data) + ['password' => Hash::make($data['password'])];
+        $user = User::create($data);
+        Mail::to($user->email)->send(new WelcomeEmail($user));
+        return $user;
     }
 
     /**
      * Upload and process user avatar
-     *
-     * @param User $user
-     * @param UploadedFile $file
-     * @return string Filename of uploaded avatar
-     * @throws \Exception If upload fails
      */
     public function uploadAvatar(User $user, UploadedFile $file): string
     {
-        try {
-            // Generate unique filename
-            $filename = $user->id . '-' . uniqid() . '.jpg';
+        $filename = $this->processAvatarFile($file, $user->id);
+        $this->deleteOldAvatar($user);
+        $user->update(['avatar' => $filename]);
+        return $filename;
+    }
 
-            // Create image manager instance
-            $manager = new ImageManager(new Driver());
-            
-            // Read and process image
-            $image = $manager->read($file);
-            $image->cover(120, 120);
-            
-            // Encode as JPG
-            $encoded = $image->toJpeg(75);
-
-            // Store in public disk
-            Storage::disk('public')->put("avatars/{$filename}", $encoded);
-
-            // Delete old avatar if exists and not default
-            $this->deleteOldAvatar($user);
-
-            // Update user avatar
-            $user->avatar = $filename;
-            $user->save();
-
-            return $filename;
-        } catch (\Exception $e) {
-            // Re-throw with context
-            throw new \Exception("Failed to upload avatar: " . $e->getMessage());
-        }
+    /**
+     * Process avatar image and save to storage
+     */
+    protected function processAvatarFile(UploadedFile $file, int $userId): string
+    {
+        $filename = $userId . '-' . uniqid() . '.jpg';
+        $manager = new ImageManager(new Driver());
+        $image = $manager->read($file)->cover(120, 120);
+        Storage::disk('public')->put("avatars/{$filename}", $image->toJpeg(75));
+        return $filename;
     }
 
     /**
@@ -73,12 +50,21 @@ class UserService
      */
     protected function deleteOldAvatar(User $user): void
     {
-        $oldAvatar = $user->avatar;
-        
-        // Don't delete default avatar
-        if ($oldAvatar && !str_starts_with($oldAvatar, 'fallback-avatar')) {
-            Storage::disk('public')->delete("avatars/{$oldAvatar}");
+        $avatar = $user->avatar;
+        if ($avatar && !str_starts_with($avatar, 'fallback-avatar')) {
+            Storage::disk('public')->delete("avatars/{$avatar}");
         }
+    }
+
+    /**
+     * Sanitize and validate credentials
+     */
+    protected function sanitizeCredentials(array $data): array
+    {
+        return [
+            'username' => strip_tags(trim($data['username'])),
+            'email' => strip_tags(trim($data['email'])),
+        ];
     }
 
     /**
@@ -102,18 +88,10 @@ class UserService
 
     /**
      * Get user by username
-     *
-     * @param string $username
-     * @return User|null
      */
     public function findByUsername(string $username): ?User
     {
         $username = strip_tags(trim($username));
-        
-        if (empty($username)) {
-            return null;
-        }
-        
-        return User::where('username', $username)->first();
+        return empty($username) ? null : User::firstWhere('username', $username);
     }
 }

@@ -11,6 +11,7 @@
         "laravel/framework": "^12.0",
         "laravel/scout": "^10.23",
         "laravel/tinker": "^2.10.1",
+        "livewire/livewire": "^4.1",
         "pusher/pusher-php-server": "^7.2"
     },
     "require-dev": {
@@ -46,6 +47,27 @@
         "dev": [
             "Composer\\Config::disableProcessTimeout",
             "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1 --timeout=0\" \"php artisan pail --timeout=0\" \"npm run dev\" --names=server,queue,logs,vite --kill-others"
+        ],
+        "prod:install": [
+            "composer install --optimize-autoloader --no-dev",
+            "npm ci",
+            "npm run build"
+        ],
+        "prod:optimize": [
+            "@php artisan config:cache",
+            "@php artisan route:cache",
+            "@php artisan view:cache",
+            "@php artisan event:cache"
+        ],
+        "prod:clear": [
+            "@php artisan optimize:clear"
+        ],
+        "prod:deploy": [
+            "@prod:clear",
+            "@prod:install",
+            "@php artisan migrate --force",
+            "@prod:optimize",
+            "@php artisan storage:link"
         ],
         "test": [
             "@php artisan config:clear --ansi",

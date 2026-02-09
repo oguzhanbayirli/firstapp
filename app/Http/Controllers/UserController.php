@@ -3,19 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Events\FirstExampleEvent;
+use App\Services\UserService;
 use App\Models\User;
 use App\Models\Post;
-use App\Models\Follow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 
 class UserController extends Controller
 {
     /**
      * Handle user registration
      */
-    public function register(Request $request)
+    public function register(Request $request, UserService $userService)
     {
         $validated = $request->validate([
             'username' => 'required|unique:users,username|min:3|max:20|alpha_dash',
@@ -23,32 +22,25 @@ class UserController extends Controller
             'password' => 'required|min:8|max:50|confirmed',
         ]);
 
-        $user = User::create([
-            'username' => $validated['username'],
-            'email' => $validated['email'],
-            'password' => $validated['password'],
-            'avatar' => 'default-avatar.svg',
-        ]);
-
-        Auth::login($user);
-
-        return redirect('/')->with('success', 'Welcome to FirstApp! You have successfully registered.');
+        $userService->register($validated);
+        Auth::attempt(['username' => $validated['username'], 'password' => $validated['password']]);
+        return redirect('/')->with('success', 'Welcome to FirstApp!');
     }
 
     /**
      * Handle user login
      */
-    public function login(Request $request)
+    public function login(Request $request, UserService $userService)
     {
         $credentials = $request->validate([
             'loginusername' => 'required',
             'loginpassword' => 'required',
         ]);
 
-        if (Auth::attempt(
-            ['username' => $credentials['loginusername'], 'password' => $credentials['loginpassword']],
-            false
-        )) {
+        if ($userService->attemptLogin([
+            'username' => $credentials['loginusername'],
+            'password' => $credentials['loginpassword']
+        ])) {
             event(new FirstExampleEvent($credentials['loginusername'], 'logged in'));
             $request->session()->regenerate();
             return redirect('/')->with('success', 'You have successfully logged in.');
@@ -60,12 +52,11 @@ class UserController extends Controller
     /**
      * Handle user logout
      */
-    public function logout(Request $request)
+    public function logout(Request $request, UserService $userService)
     {
-        Auth::logout();
+        $userService->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-
         return redirect('/')->with('success', 'You have successfully logged out.');
     }
     /**
@@ -171,13 +162,23 @@ class UserController extends Controller
             $currentlyFollowing = $user->isFollowing($profile);
         }
 
+        // Cache profile counts for 5 minutes
+        $cacheKey = "profile_{$profile->id}_counts";
+        $counts = cache()->remember($cacheKey, 300, function () use ($profile) {
+            return [
+                'postCount' => $profile->posts()->count(),
+                'followerCount' => $profile->followerCount(),
+                'followingCount' => $profile->followingCount(),
+            ];
+        });
+
         return [
             'avatar' => $profile->avatar,
             'username' => $profile->username,
-            'postCount' => $profile->posts()->count(),
+            'postCount' => $counts['postCount'],
             'currentlyFollowing' => $currentlyFollowing,
-            'followerCount' => $profile->followerCount(),
-            'followingCount' => $profile->followingCount(),
+            'followerCount' => $counts['followerCount'],
+            'followingCount' => $counts['followingCount'],
         ];
     }
 

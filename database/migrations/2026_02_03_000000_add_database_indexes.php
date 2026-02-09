@@ -15,12 +15,16 @@ return new class extends Migration
         Schema::table('posts', function (Blueprint $table) {
             $table->index('user_id');
             $table->index('created_at');
-            $table->fullText(['title', 'body']); // For full-text search optimization
+            // SQLite doesn't support fullText, only MySQL/PostgreSQL
+            if (Schema::getConnection()->getDriverName() !== 'sqlite') {
+                $table->fullText(['title', 'body']); // For full-text search optimization on MySQL/PostgreSQL
+            }
         });
 
         // Index follow table for quick follower/following lookup
         Schema::table('follow', function (Blueprint $table) {
-            $table->index('followed_user_id');
+            $table->index('user_id');
+            $table->index('followeduser');
             $table->index('created_at');
         });
 
@@ -39,11 +43,15 @@ return new class extends Migration
         Schema::table('posts', function (Blueprint $table) {
             $table->dropIndex('posts_user_id_index');
             $table->dropIndex('posts_created_at_index');
-            $table->dropFullText('posts_title_body_fulltext');
+            // Only drop fullText if database supports it
+            if (Schema::getConnection()->getDriverName() !== 'sqlite') {
+                $table->dropFullText('posts_title_body_fulltext');
+            }
         });
 
         Schema::table('follow', function (Blueprint $table) {
-            $table->dropIndex('follow_followed_user_id_index');
+            $table->dropIndex('follow_user_id_index');
+            $table->dropIndex('follow_followeduser_index');
             $table->dropIndex('follow_created_at_index');
         });
 

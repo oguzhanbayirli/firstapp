@@ -9,16 +9,16 @@ use Illuminate\Support\Facades\Gate;
 
 class PostService
 {
+    public function __construct(protected CacheService $cache) {}
     /**
      * Create a new post
      */
     public function createPost(User $user, array $data): Post
     {
-        $data['title'] = strip_tags($data['title']);
-        $data['body'] = strip_tags($data['body']);
-        $data['user_id'] = $user->id;
-
-        return Post::create($data);
+        $data = $this->sanitizePostData($data) + ['user_id' => $user->id];
+        $post = Post::create($data);
+        $this->cache->clearUserCache($user->id);
+        return $post;
     }
 
     /**
@@ -26,11 +26,19 @@ class PostService
      */
     public function updatePost(Post $post, array $data): bool
     {
-        // Authorization check should be done in controller
-        $post->title = strip_tags($data['title']);
-        $post->body = strip_tags($data['body']);
-
+        $post->update($this->sanitizePostData($data));
         return $post->save();
+    }
+
+    /**
+     * Sanitize post data
+     */
+    protected function sanitizePostData(array $data): array
+    {
+        return [
+            'title' => strip_tags($data['title'] ?? ''),
+            'body' => strip_tags($data['body'] ?? ''),
+        ];
     }
 
     /**
@@ -39,7 +47,15 @@ class PostService
     public function deletePost(Post $post): bool
     {
         // Authorization check should be done in controller
-        return $post->delete();
+        $userId = $post->user_id;
+        $deleted = $post->delete();
+        
+        if ($deleted) {
+            // Invalidate user's post count cache
+            $this->cache->clearUserCache($userId);
+        }
+        
+        return $deleted;
     }
 
     /**
@@ -72,7 +88,7 @@ class PostService
     {
         // Get IDs of users that the current user follows
         $followingIds = $user->followingTheseUsers()
-            ->pluck('followeduser')
+            ->pluck('followed_user_id')
             ->toArray();
 
         // Include current user's ID to show their own posts

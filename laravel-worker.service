@@ -1,0 +1,27 @@
+[Unit]
+Description=Laravel Queue Worker
+After=network.target mysql.service redis.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+Restart=always
+RestartSec=10
+ExecStart=/usr/bin/php /var/www/your-app/artisan queue:work --sleep=3 --tries=3 --max-time=3600 --timeout=60
+
+# Output to journalctl
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=laravel-worker
+
+# Optional: Limit resources
+MemoryLimit=512M
+CPUQuota=50%
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

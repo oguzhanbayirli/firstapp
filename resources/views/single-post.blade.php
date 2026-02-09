@@ -6,24 +6,18 @@
             <div class="flex-grow-1">
               <h1 class="h2 mb-2">{{ $post->title }}</h1>
               <div class="post-meta text-muted small">
-                <img class="avatar-tiny" src="{{ $post->user->avatar }}" />
-                <a href="/profile/{{ $post->user->username }}" class="text-muted font-weight-bold">{{ $post->user->username }}</a>
+                <img class="avatar-tiny" src="{{ $post->user->avatar }}" alt="{{ $post->user->username }}" loading="eager">
+                <a href="/profile/{{ $post->user->username }}" class="text-muted">{{ $post->user->username }}</a>
                 <span class="mx-1">•</span>
                 <time datetime="{{ $post->created_at->toIso8601String() }}">{{ $post->created_at->format('M d, Y') }}</time>
               </div>
             </div>
             @can('update', $post)
             <div class="post-actions">
-              <a href="/post/{{ $post->id }}/edit" class="btn btn-sm btn-outline-primary mr-2" data-toggle="tooltip" data-placement="bottom" title="Edit post">
+              <a href="/post/{{ $post->id }}/edit" class="btn btn-sm btn-outline-primary mr-2">
                 <i class="fas fa-edit"></i>
               </a>
-              <form class="delete-post-form d-inline" action="/post/{{ $post->id }}" method="POST">
-                @csrf
-                @method('DELETE')
-                <button class="btn btn-sm btn-outline-danger" data-toggle="tooltip" data-placement="bottom" title="Delete post">
-                  <i class="fas fa-trash"></i>
-                </button>
-              </form>
+              <livewire:delete-post :post="$post" />
             </div>
             @endcan
           </div>

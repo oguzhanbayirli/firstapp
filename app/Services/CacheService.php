@@ -33,6 +33,23 @@ class CacheService
     }
 
     /**
+     * Get value from cache
+     */
+    public function get(string $key, mixed $default = null): mixed
+    {
+        return Cache::get($key, $default);
+    }
+
+    /**
+     * Put value in cache
+     */
+    public function put(string $key, mixed $value, ?int $hours = null): void
+    {
+        $hours = $hours ?? self::DEFAULT_DURATION;
+        Cache::put($key, $value, now()->addHours($hours));
+    }
+
+    /**
      * Forget a cache key
      */
     public function forget(string $key): bool
@@ -60,6 +77,7 @@ class CacheService
             "{$prefix}.{$userId}.followers_count",
             "{$prefix}.{$userId}.following_count",
             "{$prefix}.{$userId}.posts_count",
+            "profile_{$userId}_counts", // UserController profile cache
         ]);
     }
 
@@ -80,11 +98,7 @@ class CacheService
      */
     public function getFollowersCount(int $userId, callable $callback): int
     {
-        $prefix = self::PREFIX_USER;
-        return $this->remember(
-            "{$prefix}.{$userId}.followers_count",
-            $callback
-        );
+        return $this->remember($this->userCacheKey($userId, 'followers_count'), $callback);
     }
 
     /**
@@ -92,11 +106,7 @@ class CacheService
      */
     public function getFollowingCount(int $userId, callable $callback): int
     {
-        $prefix = self::PREFIX_USER;
-        return $this->remember(
-            "{$prefix}.{$userId}.following_count",
-            $callback
-        );
+        return $this->remember($this->userCacheKey($userId, 'following_count'), $callback);
     }
 
     /**
@@ -104,11 +114,15 @@ class CacheService
      */
     public function getPostsCount(int $userId, callable $callback): int
     {
-        $prefix = self::PREFIX_USER;
-        return $this->remember(
-            "{$prefix}.{$userId}.posts_count",
-            $callback
-        );
+        return $this->remember($this->userCacheKey($userId, 'posts_count'), $callback);
+    }
+
+    /**
+     * Generate user cache key
+     */
+    protected function userCacheKey(int $userId, string $attribute): string
+    {
+        return self::PREFIX_USER . ".{$userId}.{$attribute}";
     }
 
     /**

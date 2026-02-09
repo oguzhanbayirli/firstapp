@@ -19,17 +19,17 @@ class SetCacheHeaders
 
         // Cache static assets for 1 year (far future)
         if ($request->is('build/*') || $request->is('storage/*')) {
-            $response->header('Cache-Control', 'public, max-age=31536000, immutable');
+            $response->headers->set('Cache-Control', 'public, max-age=31536000, immutable');
         }
         // Cache API responses for 5 minutes
         elseif ($request->is('api/*')) {
-            $response->header('Cache-Control', 'public, max-age=300');
+            $response->headers->set('Cache-Control', 'public, max-age=300');
         }
         // Don't cache dynamic HTML pages
         elseif ($response->isSuccessful() && !$response->isNotFound()) {
-            $response->header('Cache-Control', 'no-cache, no-store, must-revalidate');
-            $response->header('Pragma', 'no-cache');
-            $response->header('Expires', '0');
+            $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate');
+            $response->headers->set('Pragma', 'no-cache');
+            $response->headers->set('Expires', '0');
         }
 
         return $response;

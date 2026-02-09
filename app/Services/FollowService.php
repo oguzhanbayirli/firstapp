@@ -2,37 +2,27 @@
 
 namespace App\Services;
 
+use App\Mail\NewFollowerEmail;
 use App\Models\Follow;
 use App\Models\User;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
 
 class FollowService
 {
+    public function __construct(protected CacheService $cache) {}
+
     /**
      * Create a follow relationship between two users
      */
     public function follow(User $follower, User $userToFollow): bool
     {
-        // Prevent self-following
-        if ($follower->id === $userToFollow->id) {
+        if ($follower->id === $userToFollow->id || $this->isFollowing($follower, $userToFollow)) {
             return false;
         }
 
-        // Check if already following
-        if ($this->isFollowing($follower, $userToFollow)) {
-            return false;
-        }
-
-        // Create follow relationship
-        Follow::create([
-            'user_id' => $follower->id,
-            'followeduser' => $userToFollow->id,
-        ]);
-
-        // Clear cache
-        $this->clearFollowCache($follower);
-        $this->clearFollowCache($userToFollow);
-
+        Follow::create(['user_id' => $follower->id, 'followed_user_id' => $userToFollow->id]);
+        $this->clearCaches($follower->id, $userToFollow->id);
+        Mail::to($userToFollow->email)->send(new NewFollowerEmail($follower, $userToFollow));
         return true;
     }
 
@@ -42,17 +32,23 @@ class FollowService
     public function unfollow(User $follower, User $userToUnfollow): bool
     {
         $deleted = Follow::where('user_id', $follower->id)
-            ->where('followeduser', $userToUnfollow->id)
+            ->where('followed_user_id', $userToUnfollow->id)
             ->delete();
 
         if ($deleted) {
-            // Clear cache
-            $this->clearFollowCache($follower);
-            $this->clearFollowCache($userToUnfollow);
-            return true;
+            $this->clearCaches($follower->id, $userToUnfollow->id);
         }
 
-        return false;
+        return (bool) $deleted;
+    }
+
+    /**
+     * Clear cache for follow relationships
+     */
+    protected function clearCaches(int $followerId, int $followedId): void
+    {
+        $this->cache->clearFollowCache($followerId);
+        $this->cache->clearFollowCache($followedId);
     }
 
     /**
@@ -61,44 +57,38 @@ class FollowService
     public function isFollowing(User $follower, User $user): bool
     {
         return Follow::where('user_id', $follower->id)
-            ->where('followeduser', $user->id)
+            ->where('followed_user_id', $user->id)
             ->exists();
     }
 
     /**
-     * Get followers count for a user
+     * Get followers count for a user (cached)
      */
     public function getFollowersCount(User $user): int
     {
-        return Cache::remember(
-            "user.{$user->id}.followers_count",
-            now()->addHours(2),
-            fn() => Follow::where('followeduser', $user->id)->count()
+        return $this->cache->getFollowersCount(
+            $user->id, 
+            fn() => Follow::where('followed_user_id', $user->id)->count()
         );
     }
 
     /**
-     * Get following count for a user
+     * Get following count for a user (cached)
      */
     public function getFollowingCount(User $user): int
     {
-        return Cache::remember(
-            "user.{$user->id}.following_count",
-            now()->addHours(2),
+        return $this->cache->getFollowingCount(
+            $user->id,
             fn() => Follow::where('user_id', $user->id)->count()
         );
     }
 
     /**
      * Get paginated followers for a user
-     *
-     * @param User $user
-     * @param int $perPage
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
     public function getFollowers(User $user, int $perPage = 10)
     {
-        return Follow::where('followeduser', $user->id)
+        return Follow::where('followed_user_id', $user->id)
             ->with('userDoingTheFollowing')
             ->latest()
             ->paginate($perPage);
@@ -106,10 +96,6 @@ class FollowService
 
     /**
      * Get paginated following for a user
-     *
-     * @param User $user
-     * @param int $perPage
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
     public function getFollowing(User $user, int $perPage = 10)
     {
@@ -117,14 +103,5 @@ class FollowService
             ->with('userBeingFollowed')
             ->latest()
             ->paginate($perPage);
-    }
-
-    /**
-     * Clear follow-related cache for a user
-     */
-    public function clearFollowCache(User $user): void
-    {
-        Cache::forget("user.{$user->id}.followers_count");
-        Cache::forget("user.{$user->id}.following_count");
     }
 }

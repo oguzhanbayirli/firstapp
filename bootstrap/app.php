@@ -16,7 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'mustBeLoggedIn' => \App\Http\Middleware\MustBeLoggedIn::class,
         ]);
         
-        // Add cache headers middleware
+        // Performance middleware
+        $middleware->append(\App\Http\Middleware\HttpCache::class);
+        $middleware->append(\App\Http\Middleware\CompressResponse::class);
         $middleware->append(\App\Http\Middleware\SetCacheHeaders::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
